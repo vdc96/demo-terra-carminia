@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--C:#8B1A33;--CD:#6B1226;--CM:#C4425A;--CL:#F5E6EA}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#111;color:#fff;height:100dvh;display:flex;flex-direction:column;overflow:hidden}
+nav{background:var(--CD);display:flex;flex-shrink:0;border-bottom:2px solid var(--C)}
+.nb{flex:1;padding:11px 8px;background:transparent;border:none;color:rgba(255,255,255,0.55);font-size:11px;font-weight:600;letter-spacing:0.5px;cursor:pointer;transition:all 0.2s;text-transform:uppercase;border-bottom:2px solid transparent;margin-bottom:-2px;font-family:inherit}
+.nb.active{color:#fff;background:rgba(255,255,255,0.08);border-bottom-color:#F5C842}
+.nb:hover:not(.active){color:#fff;background:rgba(255,255,255,0.05)}
+.page{display:none;flex:1;flex-direction:column;overflow:hidden}
+.page.active{display:flex}
+
+/* MAP */
+header{background:var(--C);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.logo{font-size:14px;font-weight:700}
+.subtitle{font-size:10px;opacity:0.7;margin-top:1px}
+.legend{display:flex;gap:10px}
+.li{display:flex;align-items:center;gap:5px;font-size:10px;opacity:0.85}
+.ld{width:10px;height:10px;border-radius:50%}
+#map{flex:1;z-index:1}
+.fbar{background:var(--CD);padding:8px 14px;display:flex;align-items:center;gap:7px;flex-wrap:wrap;flex-shrink:0}
+.fb{font-size:11px;padding:4px 11px;border-radius:20px;border:1px solid rgba(255,255,255,0.3);background:transparent;color:#fff;cursor:pointer;transition:all 0.15s;font-family:inherit}
+.fb.active{border-color:transparent}
+.cbadge{background:rgba(255,255,255,0.12);border-radius:10px;padding:2px 8px;font-size:10px;margin-left:auto}
+.leaflet-popup-content-wrapper{border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.3);padding:0;overflow:hidden;border:none}
+.leaflet-popup-content{margin:0;width:230px!important}
+.leaflet-popup-tip-container{display:none}
+.pt{padding:11px 13px 9px;color:#fff}
+.pn{font-size:10px;font-weight:600;opacity:0.75;margin-bottom:2px;letter-spacing:0.4px}
+.ptitle{font-size:13px;font-weight:700;line-height:1.3;margin-bottom:1px}
+.pz{font-size:10px;opacity:0.7}
+.pb{padding:9px 13px 11px;background:#fff}
+.pa{font-size:11px;color:#666;margin-bottom:8px;line-height:1.4}
+.pl{display:inline-block;font-size:11px;font-weight:600;padding:5px 12px;border-radius:5px;text-decoration:none;color:#fff}
+
+/* ADMIN */
+.aw{flex:1;overflow-y:auto;padding:20px 16px;background:#111}
+.ah{background:var(--C);border-radius:10px;padding:14px 16px;margin-bottom:20px}
+.ah h2{font-size:15px;font-weight:700;margin-bottom:2px}
+.ah p{font-size:11px;opacity:0.7}
+.plist{display:flex;flex-direction:column;gap:8px;margin-bottom:24px}
+.pc{background:#1e1e1e;border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:11px 13px;display:flex;align-items:center;gap:10px}
+.pnb{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0}
+.pi{flex:1;min-width:0}
+.pi strong{font-size:12px;font-weight:600;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pi small{font-size:10px;opacity:0.5}
+.ppill{font-size:9px;font-weight:600;padding:2px 8px;border-radius:10px;text-transform:uppercase;letter-spacing:0.3px;flex-shrink:0}
+.pdel{background:transparent;border:none;color:rgba(255,255,255,0.25);cursor:pointer;font-size:16px;padding:4px;line-height:1;transition:color 0.15s;flex-shrink:0}
+.pdel:hover{color:#E24B4A}
+.stitle{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:rgba(255,255,255,0.4);margin-bottom:10px}
+
+/* FORM */
+.asec{background:#1e1e1e;border:1px solid rgba(255,255,255,0.12);border-radius:10px;padding:16px}
+.asec h3{font-size:13px;font-weight:600;margin-bottom:14px;color:rgba(255,255,255,0.8);display:flex;align-items:center;gap:6px}
+.fr{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.fr.full{grid-template-columns:1fr}
+.fg{display:flex;flex-direction:column;gap:5px}
+.fg label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:rgba(255,255,255,0.5)}
+.fg input,.fg select{background:#2a2a2a;border:1px solid rgba(255,255,255,0.15);border-radius:6px;padding:8px 10px;color:#fff;font-size:12px;font-family:inherit;outline:none;transition:border-color 0.15s}
+.fg input:focus,.fg select:focus{border-color:var(--CM)}
+.fg select option{background:#2a2a2a;color:#fff}
+.fg input[readonly]{color:rgba(255,255,255,0.4);cursor:default}
+
+/* COORDS PICKER */
+.coord-row{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;margin-bottom:10px;align-items:end}
+.pick-btn{padding:9px 14px;background:var(--C);border:none;border-radius:6px;color:#fff;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit;transition:background 0.15s;height:36px;display:flex;align-items:center;gap:5px}
+.pick-btn:hover{background:var(--CM)}
+.pick-btn.active{background:#2e7a4a;animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.7}}
+
+/* MAP PICKER OVERLAY */
+#picker-overlay{display:none;position:fixed;inset:0;z-index:9000;flex-direction:column}
+#picker-overlay.show{display:flex}
+.po-bar{background:var(--C);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.po-bar span{font-size:13px;font-weight:600}
+.po-bar small{font-size:11px;opacity:0.75}
+.po-cancel{background:rgba(255,255,255,0.15);border:none;color:#fff;padding:7px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;font-family:inherit}
+.po-cancel:hover{background:rgba(255,255,255,0.25)}
+#picker-map{flex:1}
+.po-confirm{display:none;position:absolute;bottom:20px;left:50%;transform:translateX(-50%);z-index:9100;background:var(--C);color:#fff;border:none;padding:12px 28px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;box-shadow:0 4px 20px rgba(0,0,0,0.4)}
+.po-confirm:hover{background:var(--CM)}
+.po-coords{position:absolute;top:68px;left:50%;transform:translateX(-50%);z-index:9100;background:rgba(0,0,0,0.7);color:#fff;padding:6px 14px;border-radius:20px;font-size:12px;white-space:nowrap;display:none}
+
+.abtn{width:100%;margin-top:14px;padding:11px;background:var(--C);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:background 0.15s}
+.abtn:hover{background:var(--CM)}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--C);color:#fff;padding:10px 20px;border-radius:8px;font-size:12px;font-weight:600;z-index:99999;opacity:0;transition:opacity 0.3s;pointer-events:none}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+
+<nav>
+  <button class="nb active" onclick="showPage('map',this)"> Mappa</button>
+  <button class="nb" onclick="showPage('admin',this)">✚ Gestisci luoghi</button>
+</nav>
+
+<!-- MAP PAGE -->
+<div class="page active" id="page-map">
+  <header>
+    <div><div class="logo">Mappa dei Luoghi Carmiano Magliano (LE)</div><div class="subtitle">Clicca sui check point per avere maggiori informazioni</div></div>
+    <div class="legend">
+      <div class="li"><div class="ld" style="background:#9c6b1a"></div>Storico</div>
+      <div class="li"><div class="ld" style="background:#8B1A33"></div>Religioso</div>
+      <div class="li"><div class="ld" style="background:#2e7a4a"></div>Piazze</div>
+    </div>
+  </header>
+  <div id="map"></div>
+  <div class="fbar">
+    <span style="font-size:10px;opacity:0.5">Filtra:</span>
+    <button class="fb active" data-cat="all" onclick="filterMarkers('all',this)">Tutti</button>
+    <button class="fb" data-cat="storico" onclick="filterMarkers('storico',this)">Storico</button>
+    <button class="fb" data-cat="religioso" onclick="filterMarkers('religioso',this)">Religioso</button>
+    <button class="fb" data-cat="pubblico" onclick="filterMarkers('pubblico',this)">Piazze</button>
+    <span class="cbadge" id="count-badge">25 luoghi</span>
+  </div>
+</div>
+
+<!-- ADMIN PAGE -->
+<div class="page" id="page-admin">
+  <div class="aw">
+    <div class="ah"><h2>Gestione punti di interesse</h2><p>Aggiungi, visualizza o rimuovi i luoghi dalla mappa</p></div>
+    <div class="stitle" id="list-title">25 luoghi registrati</div>
+    <div class="plist" id="poi-list"></div>
+    <div class="asec">
+      <h3><span style="font-size:16px">＋</span> Aggiungi nuovo luogo</h3>
+      <div class="fr">
+        <div class="fg"><label>Nome del luogo *</label><input type="text" id="f-title" placeholder="es. Chiesa di San Marco"></div>
+        <div class="fg"><label>Zona *</label><input type="text" id="f-zona" placeholder="Carmiano / Magliano"></div>
+      </div>
+      <div class="fr">
+        <div class="fg"><label>Categoria *</label>
+          <select id="f-cat">
+            <option value="">— Seleziona —</option>
+            <option value="storico">Patrimonio storico</option>
+            <option value="religioso">Patrimonio religioso</option>
+            <option value="pubblico">Piazze e spazi pubblici</option>
+          </select>
+        </div>
+        <div class="fg"><label>Indirizzo</label><input type="text" id="f-addr" placeholder="Via / Piazza"></div>
+      </div>
+
+      <!-- COORDS ROW -->
+      <div class="coord-row">
+        <div class="fg"><label>Latitudine *</label><input type="text" id="f-lat" placeholder="—" readonly></div>
+        <div class="fg"><label>Longitudine *</label><input type="text" id="f-lng" placeholder="—" readonly></div>
+        <button class="pick-btn" id="pick-btn" onclick="openPicker()">📍 Scegli sulla mappa</button>
+      </div>
+
+      <div class="fr full">
+        <div class="fg"><label>Link pagina di dettaglio</label><input type="url" id="f-link" placeholder="https://www.terracarminia.it/luoghi/..."></div>
+      </div>
+      <button class="abtn" onclick="addPoi()">Aggiungi alla mappa →</button>
+    </div>
+  </div>
+</div>
+
+<!-- PICKER OVERLAY -->
+<div id="picker-overlay">
+  <div class="po-bar">
+    <div><span>Seleziona posizione</span><br><small>Clicca sulla mappa per posizionare il segnaposto</small></div>
+    <button class="po-cancel" onclick="closePicker(false)">✕ Annulla</button>
+  </div>
+  <div id="picker-map" style="position:relative"></div>
+  <div class="po-coords" id="po-coords"></div>
+  <button class="po-confirm" id="po-confirm" onclick="closePicker(true)">✓ Conferma posizione</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+const CAT={
+  storico:{label:'Patrimonio storico',color:'#9c6b1a',pill:'rgba(156,107,26,0.25)',text:'#e8a94a'},
+  religioso:{label:'Patrimonio religioso',color:'#8B1A33',pill:'rgba(139,26,51,0.3)',text:'#e06080'},
+  pubblico:{label:'Piazze e spazi pubblici',color:'#2e7a4a',pill:'rgba(46,122,74,0.25)',text:'#5ec48a'},
+};
+
+let POIS=[
+  {n:1,cat:'storico',zona:'Carmiano',title:'Palazzo dei Celestini',addr:'Via Lecce',lat:40.3457,lng:18.0482,link:'https://www.terracarminia.it/luoghi/1'},
+  {n:2,cat:'storico',zona:'Carmiano',title:'Fontana Monumentale',addr:'Piazza Diaz',lat:40.34434,lng:18.04493,link:'https://www.terracarminia.it/luoghi/2'},
+  {n:3,cat:'storico',zona:'Magliano',title:'Orologio Storico di Magliano',addr:'Via Chiesa Madre',lat:40.3383,lng:18.0618,link:'https://www.terracarminia.it/luoghi/3'},
+  {n:4,cat:'storico',zona:'Magliano',title:'Frantoio Semi-Ipogeo',addr:'Via Trappeto',lat:40.33685,lng:18.06106,link:'https://www.terracarminia.it/luoghi/4'},
+  {n:5,cat:'religioso',zona:'Carmiano',title:"Chiesa dell'Immacolata Concezione",addr:'Via Immacolata',lat:40.3488,lng:18.0483,link:'https://www.terracarminia.it/luoghi/5'},
+  {n:6,cat:'religioso',zona:'Carmiano',title:'Chiesa Matrice Maria SS.ma Assunta',addr:'Via XXV Luglio',lat:40.3446,lng:18.0457,link:'https://www.terracarminia.it/luoghi/6'},
+  {n:7,cat:'religioso',zona:'Carmiano',title:"Chiesa di Sant'Antonio Abate",addr:'Via D. Donato Franco',lat:40.3477,lng:18.0386,link:'https://www.terracarminia.it/luoghi/7'},
+  {n:8,cat:'religioso',zona:'Carmiano',title:'Cappella del Carmine',addr:'Via Roma',lat:40.3473,lng:18.0447,link:'https://www.terracarminia.it/luoghi/8'},
+  {n:9,cat:'religioso',zona:'Carmiano',title:"Cappella di San Francesco d'Assisi",addr:'Via S. Francesco',lat:40.3449,lng:18.0465,link:'https://www.terracarminia.it/luoghi/9'},
+  {n:10,cat:'religioso',zona:'Carmiano',title:'Chiesa Madonna di Costantinopoli(Turriso)',addr:'Carmiano',lat:40.33441,lng:18.01829,link:'https://www.terracarminia.it/luoghi/10'},
+  {n:11,cat:'religioso',zona:'Carmiano',title:'Cappella de «La Cona»',addr:'Carmiano',lat:40.340503,lng:18.029436,link:'https://www.terracarminia.it/luoghi/11'},
+  {n:12,cat:'religioso',zona:'Carmiano',title:'Cappella Madonna del Rosario',addr:'Str. Vecchia Campi',lat:40.35487,lng:18.03271,link:'https://www.terracarminia.it/luoghi/12'},
+  {n:13,cat:'religioso',zona:'Carmiano',title:'Cappella Antica di San Giovanni Battista',addr:'Via S. Francesco',lat:40.3448,lng:18.0463,link:'https://www.terracarminia.it/luoghi/13'},
+  {n:14,cat:'religioso',zona:'Carmiano',title:'Cappella Nuova di San Giovanni Battista',addr:'Via don A. Niccoli',lat:40.33859,lng:18.04262,link:'https://www.terracarminia.it/luoghi/14'},
+  {n:15,cat:'religioso',zona:'Carmiano',title:'Cappella Lecciso (di Don Felice)',addr:'Via Torricelli',lat:40.34509,lng:18.04740,link:'https://www.terracarminia.it/luoghi/15'},
+  {n:16,cat:'religioso',zona:'Carmiano',title:'Li Sala',addr:'SP13, loc. Li Sala',lat:40.3571,lng:18.0450,link:'https://www.terracarminia.it/luoghi/16'},
+  {n:17,cat:'religioso',zona:'Magliano',title:"Cappella della Madonna dell'8 Settembre",addr:'Contrada Bosco',lat:40.3464,lng:18.0638,link:'https://www.terracarminia.it/luoghi/17'},
+  {n:18,cat:'religioso',zona:'Magliano',title:'Nuova Chiesa Maria SS.ma Assunta — Magliano',addr:'Piazza degli Eroi',lat:40.3378,lng:18.0612,link:'https://www.terracarminia.it/luoghi/18'},
+  {n:19,cat:'religioso',zona:'Magliano',title:'Vecchia Chiesa Maria SS.ma Assunta — Magliano',addr:'Magliano',lat:40.33784,lng:18.06309,link:'https://www.terracarminia.it/luoghi/19'},
+  {n:20,cat:'pubblico',zona:'Carmiano',title:'Piazza Maria SS.ma Assunta',addr:'Centro storico',lat:40.3448,lng:18.0458,link:'https://www.terracarminia.it/luoghi/20'},
+  {n:21,cat:'pubblico',zona:'Carmiano',title:'Piazza Giovanni Franco Vadacca',addr:'Rione Saraceni',lat:40.34911,lng:18.03705,link:'https://www.terracarminia.it/luoghi/21'},
+  {n:22,cat:'pubblico',zona:'Carmiano',title:'Piazza Arnesano',addr:'Via P. Micca',lat:40.34056,lng:18.04533,link:'https://www.terracarminia.it/luoghi/22'},
+  {n:23,cat:'pubblico',zona:'Carmiano',title:'Piazza del Tempo',addr:'Via Immacolata',lat:40.34711,lng:18.04767,link:'https://www.terracarminia.it/luoghi/23'},
+  {n:24,cat:'pubblico',zona:'Magliano',title:'Piazza degli Eroi',addr:'Magliano',lat:40.338117,lng:18.061523,link:'https://www.terracarminia.it/luoghi/24'},
+  {n:25,cat:'pubblico',zona:'Magliano',title:'Parco della Scienza',addr:'Via Arciprete Paladini',lat:40.3389,lng:18.0591,link:'https://www.terracarminia.it/luoghi/25'},
+];
+
+// ── Main map ────────────────────────────────────────────────────────────────
+const map=L.map('map',{zoomControl:true}).setView([40.3440,18.0520],14);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:19}).addTo(map);
+
+function makeIcon(cat,n,big){
+  const c=CAT[cat].color,fs=n>9?'9':'11';
+  const w=big?38:30,h=big?48:38;
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 30 38"><path d="M15 0C6.72 0 0 6.72 0 15c0 9.38 15 23 15 23S30 24.38 30 15C30 6.72 23.28 0 15 0z" fill="${c}" stroke="white" stroke-width="1.5"/><circle cx="15" cy="15" r="9" fill="white" opacity="0.2"/><text x="15" y="20" text-anchor="middle" font-family="Arial,sans-serif" font-size="${fs}" font-weight="700" fill="white">${n}</text></svg>`;
+  return L.divIcon({html:svg,iconSize:[w,h],iconAnchor:[w/2,h],popupAnchor:[0,-h+2],className:''});
+}
+
+function makePopup(poi){
+  const c=CAT[poi.cat];
+  const lh=poi.link?`<a class="pl" href="${poi.link}" target="_blank" style="background:${c.color}">Apri scheda →</a>`:`<span style="font-size:10px;color:#aaa">Nessun link</span>`;
+  return`<div class="pt" style="background:${c.color}"><div class="pn">#${poi.n} · ${c.label}</div><div class="ptitle">${poi.title}</div><div class="pz">${poi.zona}</div></div><div class="pb"><div class="pa">${poi.addr||'—'}</div>${lh}</div>`;
+}
+
+const markerObjs=[];
+const layers={all:null,storico:L.layerGroup(),religioso:L.layerGroup(),pubblico:L.layerGroup()};
+
+function buildMarkers(){
+  markerObjs.forEach(m=>m.remove());
+  markerObjs.length=0;
+  [layers.storico,layers.religioso,layers.pubblico].forEach(lg=>lg.clearLayers());
+  POIS.forEach(poi=>{
+    const m=L.marker([poi.lat,poi.lng],{icon:makeIcon(poi.cat,poi.n)});
+    m.bindPopup(makePopup(poi),{maxWidth:230,minWidth:230});
+    m._cat=poi.cat;
+    markerObjs.push(m);
+    layers[poi.cat].addLayer(m);
+  });
+  layers.all=L.layerGroup(markerObjs);
+}
+buildMarkers();
+layers.all.addTo(map);
+let activeLayer=layers.all,activeCat='all';
+
+function filterMarkers(cat,btn){
+  document.querySelectorAll('.fb').forEach(b=>{b.classList.remove('active');b.style.background='';b.style.borderColor='rgba(255,255,255,0.3)'});
+  btn.classList.add('active');
+  if(cat!=='all'){btn.style.background=CAT[cat].color;btn.style.borderColor=CAT[cat].color;}
+  else{btn.style.background='rgba(255,255,255,0.15)';btn.style.borderColor='rgba(255,255,255,0.5)';}
+  map.removeLayer(activeLayer);
+  activeLayer=cat==='all'?layers.all:layers[cat];
+  activeLayer.addTo(map);
+  activeCat=cat;
+  const cnt=cat==='all'?POIS.length:POIS.filter(p=>p.cat===cat).length;
+  document.getElementById('count-badge').textContent=cnt+' luoghi';
+}
+
+// ── Picker map ──────────────────────────────────────────────────────────────
+let pickerMap=null,pickerMarker=null,pickedLat=null,pickedLng=null;
+
+function openPicker(){
+  document.getElementById('picker-overlay').classList.add('show');
+  if(!pickerMap){
+    pickerMap=L.map('picker-map',{zoomControl:true}).setView([40.3440,18.0520],15);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:19}).addTo(pickerMap);
+
+    // mostra i marker esistenti (read-only, semitrasparenti)
+    POIS.forEach(p=>{
+      const ico=makeIcon(p.cat,p.n);
+      L.marker([p.lat,p.lng],{icon:ico,opacity:0.4,interactive:false}).addTo(pickerMap);
+    });
+
+    pickerMap.on('click',function(e){
+      pickedLat=e.latlng.lat;
+      pickedLng=e.latlng.lng;
+      if(pickerMarker) pickerMarker.setLatLng(e.latlng);
+      else{
+        const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="36" height="44" viewBox="0 0 36 44"><path d="M18 0C8.06 0 0 8.06 0 18c0 11.25 18 26 18 26S36 29.25 36 18C36 8.06 27.94 0 18 0z" fill="#8B1A33" stroke="white" stroke-width="2"/><circle cx="18" cy="18" r="7" fill="white" opacity="0.9"/><circle cx="18" cy="18" r="3" fill="#8B1A33"/></svg>`;
+        pickerMarker=L.marker(e.latlng,{icon:L.divIcon({html:svg,iconSize:[36,44],iconAnchor:[18,44],className:''}),draggable:true}).addTo(pickerMap);
+        pickerMarker.on('dragend',function(ev){
+          pickedLat=ev.target.getLatLng().lat;
+          pickedLng=ev.target.getLatLng().lng;
+          updatePickerInfo();
+        });
+      }
+      updatePickerInfo();
+    });
+  }
+  setTimeout(()=>pickerMap.invalidateSize(),80);
+  document.getElementById('po-coords').style.display='none';
+  document.getElementById('po-confirm').style.display='none';
+  if(pickerMarker){pickerMarker.remove();pickerMarker=null;}
+  pickedLat=null;pickedLng=null;
+}
+
+function updatePickerInfo(){
+  const cd=document.getElementById('po-coords');
+  const cf=document.getElementById('po-confirm');
+  cd.style.display='block';
+  cf.style.display='block';
+  cd.textContent=`📍 ${pickedLat.toFixed(5)}, ${pickedLng.toFixed(5)}`;
+}
+
+function closePicker(confirm){
+  if(confirm&&pickedLat!==null){
+    document.getElementById('f-lat').value=pickedLat.toFixed(6);
+    document.getElementById('f-lng').value=pickedLng.toFixed(6);
+    document.getElementById('pick-btn').textContent='✓ Posizione impostata';
+    document.getElementById('pick-btn').style.background='#2e7a4a';
+    toast('Posizione impostata ✓');
+  }
+  document.getElementById('picker-overlay').classList.remove('show');
+}
+
+// ── Admin list ───────────────────────────────────────────────────────────────
+function renderList(){
+  const el=document.getElementById('poi-list');
+  document.getElementById('list-title').textContent=POIS.length+' luoghi registrati';
+  el.innerHTML=POIS.map((p,i)=>{
+    const c=CAT[p.cat];
+    return`<div class="pc">
+      <div class="pnb" style="background:${c.color}">${p.n}</div>
+      <div class="pi"><strong title="${p.title}">${p.title}</strong><small>${p.zona} · ${p.addr||'—'}</small></div>
+      ${p.link?`<a href="${p.link}" target="_blank" style="font-size:10px;color:rgba(255,255,255,0.3);text-decoration:none;flex-shrink:0" title="Apri">⤴</a>`:''}
+      <span class="ppill" style="background:${c.pill};color:${c.text}">${p.cat==='storico'?'Storico':p.cat==='religioso'?'Religioso':'Piazza'}</span>
+      <button class="pdel" onclick="deletePoi(${i})">×</button>
+    </div>`;
+  }).join('');
+}
+
+function deletePoi(i){
+  if(!confirm(`Rimuovere "${POIS[i].title}"?`))return;
+  POIS.splice(i,1);POIS.forEach((p,j)=>p.n=j+1);
+  rebuildAll();toast('Luogo rimosso ✓');
+}
+
+function addPoi(){
+  const title=document.getElementById('f-title').value.trim();
+  const zona=document.getElementById('f-zona').value.trim();
+  const cat=document.getElementById('f-cat').value;
+  const addr=document.getElementById('f-addr').value.trim();
+  const lat=parseFloat(document.getElementById('f-lat').value);
+  const lng=parseFloat(document.getElementById('f-lng').value);
+  const link=document.getElementById('f-link').value.trim();
+  if(!title||!zona||!cat||isNaN(lat)||isNaN(lng)){toast('⚠ Compila tutti i campi obbligatori (*)');return;}
+  POIS.push({n:POIS.length+1,cat,zona,title,addr,lat,lng,link:link||null});
+  rebuildAll();
+  ['f-title','f-zona','f-addr','f-lat','f-lng','f-link'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('f-cat').value='';
+  document.getElementById('pick-btn').textContent='📍 Scegli sulla mappa';
+  document.getElementById('pick-btn').style.background='';
+  pickedLat=null;pickedLng=null;
+  toast('Luogo aggiunto alla mappa ✓');
+  showPage('map',document.querySelector('[onclick*="\'map\'"]'));
+}
+
+function rebuildAll(){
+  map.removeLayer(activeLayer);
+  buildMarkers();
+  activeLayer=activeCat==='all'?layers.all:layers[activeCat];
+  activeLayer.addTo(map);
+  const cnt=activeCat==='all'?POIS.length:POIS.filter(p=>p.cat===activeCat).length;
+  document.getElementById('count-badge').textContent=cnt+' luoghi';
+  renderList();
+}
+
+function showPage(name,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nb').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  btn.classList.add('active');
+  if(name==='map')setTimeout(()=>map.invalidateSize(),50);
+  if(name==='admin')renderList();
+}
+
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+renderList();
+document.querySelector('[data-cat="all"]').style.background='rgba(255,255,255,0.15)';
+document.querySelector('[data-cat="all"]').style.borderColor='rgba(255,255,255,0.5)';
+</script>
+</body>
+</html>
